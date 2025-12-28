@@ -66,3 +66,37 @@ db.on("child_added",s=>{
 
 </body>
 </html>
+<script>
+const userId = "user_" + Math.floor(Math.random() * 100000);
+const statusRef = firebase.database().ref("status/" + userId);
+
+firebase.database().ref(".info/connected").on("value", snap => {
+  if (snap.val() === true) {
+    statusRef.set("online");
+    statusRef.onDisconnect().set("offline");
+  }
+});
+</<script>
+/* 🔥 FIREBASE INIT (sabse pehle) */
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* 👤 USER STATUS (ONLINE / OFFLINE) */
+const userId = "user_" + Math.floor(Math.random() * 100000);
+const statusRef = db.ref("status/" + userId);
+
+db.ref(".info/connected").on("value", snap => {
+  if (snap.val() === true) {
+    statusRef.set("online");
+    statusRef.onDisconnect().set("offline");
+  }
+});
+
+/* 🔔 MESSAGE ALERT (jab site open ho) */
+const msgRef = db.ref("chat");
+msgRef.limitToLast(1).on("child_added", snap => {
+  if (document.visibilityState === "visible") {
+    alert("📩 New message aaya hai!");
+  }
+});
+</script>
