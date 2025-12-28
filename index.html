@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Silent Talk</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+body{font-family:Arial;background:#111;color:#fff}
+#chat{display:none}
+input,button{padding:10px;margin:5px;width:90%}
+.msg{background:#222;padding:8px;margin:5px;border-radius:5px}
+</style>
+</head>
+<body>
+
+<div id="login">
+<h2>Silent Talk 🔐</h2>
+<input id="pass" type="password" placeholder="Password">
+<button onclick="login()">Enter</button>
+</div>
+
+<div id="chat">
+<h3>Private Chat</h3>
+<div id="messages"></div>
+<input id="msg" placeholder="Type message">
+<button onclick="send()">Send</button>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDMCOAamH396pZG2IILTwYLGRUKIgKXHQ",
+  authDomain: "silenttalkweb-6835a.firebaseapp.com",
+  databaseURL: "https://silenttalkweb-6835a-default-rtdb.firebaseio.com",
+  projectId: "silenttalkweb-6835a",
+  storageBucket: "silenttalkweb-6835a.appspot.com",
+  messagingSenderId: "982126283640",
+  appId: "1:982126283640:web:faa53b0642b05fd847168d",
+  measurementId: "G-PSGXJRH70V"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database().ref("chat");
+
+function login(){
+ if(document.getElementById("pass").value==="cutie29"){
+  document.getElementById("login").style.display="none";
+  document.getElementById("chat").style.display="block";
+ }
+}
+
+function send(){
+ let text=document.getElementById("msg").value;
+ db.push({msg:text});
+ document.getElementById("msg").value="";
+}
+
+db.on("child_added",s=>{
+ let d=document.createElement("div");
+ d.className="msg";
+ d.innerText=s.val().msg;
+ d.onclick=()=>db.child(s.key).remove();
+ document.getElementById("messages").appendChild(d);
+});
+</script>
+
+</body>
+</html>
