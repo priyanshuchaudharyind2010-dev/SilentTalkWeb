@@ -66,6 +66,7 @@ input,button{
 
 <div id="chat">
   <h3>Private Chat</h3>
+  <div id="onlineUsers" class="small">Online users: 0</div>
   <div id="messages"></div>
   <input id="text" placeholder="Type message or image link">
   <button onclick="send()">Send</button>
@@ -145,6 +146,27 @@ function delMsg(key){
   location.reload();
 }
 </script>
+<script>
+const myName = localStorage.getItem("name");
 
+// 🔥 ONLINE STATUS SET
+const statusRef = firebase.database().ref("status/" + myName);
+firebase.database().ref(".info/connected").on("value", snap => {
+  if (snap.val() === true) {
+    statusRef.set("online");
+    statusRef.onDisconnect().set("offline");
+  }
+});
+
+// 🔥 COUNT ONLINE USERS
+firebase.database().ref("status").on("value", snap => {
+  let count = 0;
+  snap.forEach(s => {
+    if (s.val() === "online") count++;
+  });
+  document.getElementById("onlineUsers").innerText =
+    "Online users: " + count;
+});
+</script>
 </body>
 </html>
