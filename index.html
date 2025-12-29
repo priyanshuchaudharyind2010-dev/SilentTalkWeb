@@ -1,112 +1,160 @@
-<!DOCTYPE html>
-<html>
+<!<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Silent Talk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<title>Private Chat</title>
 
 <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <style>
-body { font-family: Arial; background:#111; color:#fff; }
-#chat { display:none; }
-input,button { padding:10px; margin:5px; width:90%; }
-.msg { background:#222; padding:8px; margin:5px; border-radius:5px; }
-.status { font-size:12px; color:lightgreen; }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+.chat-box {
+  max-width: 500px;
+  margin: auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  padding: 10px;
+  background: #111;
+  text-align: center;
+}
+
+#onlineStatus {
+  font-size: 13px;
+  color: #00ff7f;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.msg {
+  background: #1f1f1f;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.input-box {
+  display: flex;
+  padding: 8px;
+  background: #111;
+}
+
+input {
+  flex: 1;
+  padding: 8px;
+  font-size: 14px;
+}
+
+button {
+  padding: 8px 12px;
+  margin-left: 5px;
+}
 </style>
 </head>
 
 <body>
+<div class="chat-box">
+  <header>
+    <b>Private Chat</b><br>
+    <span id="onlineStatus">Connecting...</span>
+  </header>
 
-<!-- LOGIN -->
-<div id="login">
-  <h2>Silent Talk 🔒</h2>
-  <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Enter</button>
-</div>
+  <div class="messages" id="messages"></div>
 
-<!-- CHAT -->
-<div id="chat">
-  <h3>Private Chat</h3>
-  <div id="userStatus" class="status">Checking status...</div>
-  <div id="messages"></div>
-  <input id="msg" placeholder="Type message">
-  <button onclick="send()">Send</button>
+  <div class="input-box">
+    <input id="msgInput" placeholder="Type message">
+    <button onclick="sendMsg()">Send</button>
+  </div>
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG */
-const firebaseConfig = {
-  apiKey: "AIzaSyDMCOAAmH39p6ZG2ILTwvLGRUKgKXHQ",
-  authDomain: "silenttalkweb-6835a.firebaseapp.com",
-  databaseURL: "https://silenttalkweb-6835a-default-rtdb.firebaseio.com",
-  projectId: "silenttalkweb-6835a",
-  storageBucket: "silenttalkweb-6835a.appspot.com",
-  messagingSenderId: "982126283640",
-  appId: "1:982126283640:web:fa53b0642b05fd847168d"
-};
+/* 🔹 Firebase config (अपना ही रखो) */
+firebase.initializeApp({
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+  projectId: "YOUR_PROJECT"
+});
 
-firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* LOGIN */
-function login(){
-  if(document.getElementById("pass").value === "cutie29"){
-    document.getElementById("login").style.display="none";
-    document.getElementById("chat").style.display="block";
-  }
+/* 🔹 Unique username */
+let username = localStorage.getItem("username");
+if (!username) {
+  username = "user_" + Math.floor(Math.random() * 100000);
+  localStorage.setItem("username", username);
 }
 
-/* USER ID */
-const userId = "user_" + Math.floor(Math.random()*100000);
-const statusRef = db.ref("status/" + userId);
+/* 🔹 Online status */
+const statusRef = db.ref("status/" + username);
+statusRef.set("online");
+statusRef.onDisconnect().set("offline");
 
-/* ONLINE / OFFLINE */
-db.ref(".info/connected").on("value", snap => {
-  if(snap.val() === true){
-    statusRef.set("online");
-    statusRef.onDisconnect().set("offline");
-  }
-});
-
-/* SHOW ONLINE USERS */
-db.ref("status").on("value", snap=>{
-  let online = [];
-  snap.forEach(s=>{
-    if(s.val()==="online") online.push(s.key);
+/* 🔹 Show online count */
+db.ref("status").on("value", snap => {
+  let online = 0;
+  snap.forEach(s => {
+    if (s.val() === "online") online++;
   });
-  document.getElementById("userStatus").innerText =
-    "Online users: " + online.length;
+  document.getElementById("onlineStatus").innerText =
+    "Online users: " + online;
 });
 
-/* CHAT */
-const chatRef = db.ref("chat");
+/* 🔹 Messages */
+const msgRef = db.ref("messages");
 
-function send(){
-  let text = document.getElementById("msg").value;
-  if(text.trim() !== ""){
-    chatRef.push({
-      user:userId,
-      msg:text,
-      time:Date.now()
-    });
-    document.getElementById("msg").value="";
-  }
-}
-
-chatRef.on("child_added", snap=>{
-  let d = snap.val();
-  let div = document.createElement("div");
-  div.className="msg";
-  div.innerText = d.user + ": " + d.msg;
+msgRef.limitToLast(50).on("child_added", snap => {
+  const data = snap.val();
+  const div = document.createElement("div");
+  div.className = "msg";
+  div.innerText = data.user + ": " + data.text;
   document.getElementById("messages").appendChild(div);
 
-  /* ALERT (jab site open ho) */
-  if(document.visibilityState === "visible"){
-    alert("📩 New message aaya hai!");
+  /* 🔔 Notification */
+  if (document.visibilityState !== "visible") {
+    if (Notification.permission === "granted") {
+      new Notification("New message", {
+        body: data.user + ": " + data.text
+      });
+    }
   }
 });
+
+/* 🔹 Send message */
+function sendMsg() {
+  const text = msgInput.value.trim();
+  if (text === "") return;
+
+  msgRef.push({
+    user: username,
+    text: text
+  });
+
+  msgInput.value = "";
+}
+
+/* 🔹 Ask notification permission */
+if (Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
 </script>
 </body>
 </html>
