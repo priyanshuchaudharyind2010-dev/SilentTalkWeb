@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,47 +10,47 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <style>
-body {
+body{
   margin:0;
-  font-family: Arial, sans-serif;
+  font-family:Arial;
   background:#0f0f0f;
-  color:#fff;
+  color:white;
 }
-#login, #chat {
+#login, #chat{
   max-width:500px;
   margin:auto;
   padding:15px;
 }
-input, button {
+#chat{ display:none; }
+input,button{
   width:100%;
   padding:10px;
-  margin-top:8px;
-  border:none;
-  border-radius:5px;
+  margin:5px 0;
 }
-button {
-  background:#00bcd4;
-  color:#000;
-  font-weight:bold;
-}
-#messages {
+#messages{
   height:60vh;
   overflow-y:auto;
-  margin-top:10px;
+  background:#111;
+  padding:10px;
 }
-.msg {
-  background:#1e1e1e;
+.msg{
+  background:#222;
   padding:8px;
-  border-radius:6px;
-  margin-bottom:6px;
+  margin:6px 0;
+  border-radius:5px;
 }
-.msg img, .msg video {
+.msg img{
   max-width:100%;
-  border-radius:6px;
+  border-radius:5px;
 }
-#status {
+.small{
   font-size:12px;
-  color:#0f0;
+  color:#aaa;
+}
+.del{
+  color:red;
+  font-size:12px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -59,90 +59,91 @@ button {
 
 <div id="login">
   <h2>Silent Talk</h2>
-  <input id="pass" type="password" placeholder="Enter password">
+  <input id="name" placeholder="Your name">
+  <input id="pass" type="password" placeholder="Password">
   <button onclick="login()">Enter</button>
 </div>
 
-<div id="chat" style="display:none;">
+<div id="chat">
   <h3>Private Chat</h3>
-  <div id="status">Online users: 0</div>
   <div id="messages"></div>
-  <input id="msgInput" placeholder="Type message or paste photo/video link">
+  <input id="text" placeholder="Type message or image link">
   <button onclick="send()">Send</button>
 </div>
 
 <script>
-// 🔥 Firebase config (TUMHARA)
-firebase.initializeApp({
+const firebaseConfig = {
   apiKey: "AIzaSyDMCOAamH396pZG2IILTwYLGRUKIgKXHQ",
   authDomain: "silenttalkweb-6835a.firebaseapp.com",
   databaseURL: "https://silenttalkweb-6835a-default-rtdb.firebaseio.com",
   projectId: "silenttalkweb-6835a"
-});
-
+};
+firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// LOGIN
+let username = localStorage.getItem("name");
+
+if(username){
+  document.getElementById("login").style.display="none";
+  document.getElementById("chat").style.display="block";
+}
+
 function login(){
-  if(document.getElementById("pass").value === "cutie"){
-    document.getElementById("login").style.display="none";
-    document.getElementById("chat").style.display="block";
-  } else {
+  const name = document.getElementById("name").value.trim();
+  const pass = document.getElementById("pass").value;
+
+  if(name==="" || pass===""){
+    alert("Fill all");
+    return;
+  }
+  if(pass !== "cutie"){
     alert("Wrong password");
+    return;
   }
+
+  localStorage.setItem("name", name);
+  location.reload();
 }
 
-// USERNAME
-let username = localStorage.getItem("username");
-if(!username){
-  username = "User_" + Math.floor(Math.random()*10000);
-  localStorage.setItem("username", username);
-}
-
-// ONLINE STATUS
-const statusRef = db.ref("status/"+username);
-db.ref(".info/connected").on("value", snap=>{
-  if(snap.val()){
-    statusRef.set("online");
-    statusRef.onDisconnect().set("offline");
-  }
-});
-db.ref("status").on("value", snap=>{
-  let online=0;
-  snap.forEach(s=>{
-    if(s.val()==="online") online++;
-  });
-  document.getElementById("status").innerText = "Online users: "+online;
-});
-
-// SEND MESSAGE
 function send(){
-  const text = msgInput.value.trim();
+  const text = document.getElementById("text").value.trim();
   if(text==="") return;
-  db.ref("messages").push({
-    user: username,
-    text: text
+
+  db.ref("chat").push({
+    user: localStorage.getItem("name"),
+    msg: text
   });
-  msgInput.value="";
+
+  document.getElementById("text").value="";
 }
 
-// RECEIVE
-db.ref("messages").limitToLast(50).on("child_added", snap=>{
-  const d = snap.val();
-  const div = document.createElement("div");
-  div.className="msg";
+db.ref("chat").on("child_added", snap=>{
+  const data = snap.val();
+  const key = snap.key;
 
-  if(d.text.match(/\.(jpg|jpeg|png|gif)$/i)){
-    div.innerHTML = "<b>"+d.user+"</b><br><img src='"+d.text+"'>";
-  } else if(d.text.match(/\.(mp4|webm)$/i)){
-    div.innerHTML = "<b>"+d.user+"</b><br><video controls src='"+d.text+"'></video>";
-  } else {
-    div.innerHTML = "<b>"+d.user+":</b> "+d.text;
+  let html = `<div class="msg">
+    <b>${data.user}</b><br>`;
+
+  if(data.msg.match(/\.(jpg|png|jpeg|gif)$/i)){
+    html += `<img src="${data.msg}">`;
+  }else{
+    html += data.msg;
   }
 
-  messages.appendChild(div);
-  messages.scrollTop = messages.scrollHeight;
+  if(data.user === localStorage.getItem("name")){
+    html += `<div class="del" onclick="delMsg('${key}')">Delete</div>`;
+  }
+
+  html += `</div>`;
+
+  document.getElementById("messages").innerHTML += html;
+  document.getElementById("messages").scrollTop = 99999;
 });
+
+function delMsg(key){
+  db.ref("chat/"+key).remove();
+  location.reload();
+}
 </script>
 
 </body>
