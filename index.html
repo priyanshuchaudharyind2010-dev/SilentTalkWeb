@@ -12,45 +12,57 @@
 <style>
 body{
   margin:0;
-  font-family:Arial;
+  font-family:Arial, sans-serif;
   background:#0f0f0f;
   color:white;
 }
-#login, #chat{
+#login,#chat{
   max-width:500px;
   margin:auto;
   padding:15px;
 }
-#chat{ display:none; }
+#chat{display:none;}
+h2{text-align:center;}
 input,button{
   width:100%;
   padding:10px;
-  margin:5px 0;
+  margin:6px 0;
+  border:none;
+  border-radius:6px;
+  font-size:15px;
+}
+button{
+  background:#00b894;
+  color:white;
+  font-weight:bold;
 }
 #messages{
   height:60vh;
   overflow-y:auto;
   background:#111;
   padding:10px;
+  border-radius:6px;
 }
 .msg{
   background:#222;
   padding:8px;
   margin:6px 0;
-  border-radius:5px;
+  border-radius:6px;
 }
-.msg img{
+.msg img,.msg video{
   max-width:100%;
-  border-radius:5px;
+  border-radius:6px;
 }
 .small{
   font-size:12px;
   color:#aaa;
+  text-align:center;
 }
 .del{
-  color:red;
+  color:#ff7675;
   font-size:12px;
   cursor:pointer;
+  margin-top:4px;
 }
 </style>
 </head>
@@ -61,112 +73,10 @@ input,button{
   <h2>Silent Talk</h2>
   <input id="name" placeholder="Your name">
   <input id="pass" type="password" placeholder="Password">
-  <button onclick="login()">Enter</button>
+  <button onclick="login()">Login</button>
 </div>
 
 <div id="chat">
-  <h3>Private Chat</h3>
-  <div id="onlineUsers" class="small">Online users: 0</div>
+  <div class="small" id="onlineUsers">Online users: 0</div>
   <div id="messages"></div>
-  <input id="text" placeholder="Type message or image link">
-  <button onclick="send()">Send</button>
-</div>
-
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDMCOAamH396pZG2IILTwYLGRUKIgKXHQ",
-  authDomain: "silenttalkweb-6835a.firebaseapp.com",
-  databaseURL: "https://silenttalkweb-6835a-default-rtdb.firebaseio.com",
-  projectId: "silenttalkweb-6835a"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-let username = localStorage.getItem("name");
-
-if(username){
-  document.getElementById("login").style.display="none";
-  document.getElementById("chat").style.display="block";
-}
-
-function login(){
-  const name = document.getElementById("name").value.trim();
-  const pass = document.getElementById("pass").value;
-
-  if(name==="" || pass===""){
-    alert("Fill all");
-    return;
-  }
-  if(pass !== "cutie"){
-    alert("Wrong password");
-    return;
-  }
-
-  localStorage.setItem("name", name);
-  location.reload();
-}
-
-function send(){
-  const text = document.getElementById("text").value.trim();
-  if(text==="") return;
-
-  db.ref("chat").push({
-    user: localStorage.getItem("name"),
-    msg: text
-  });
-
-  document.getElementById("text").value="";
-}
-
-db.ref("chat").on("child_added", snap=>{
-  const data = snap.val();
-  const key = snap.key;
-
-  let html = `<div class="msg">
-    <b>${data.user}</b><br>`;
-
-  if(data.msg.match(/\.(jpg|png|jpeg|gif)$/i)){
-    html += `<img src="${data.msg}">`;
-  }else{
-    html += data.msg;
-  }
-
-  if(data.user === localStorage.getItem("name")){
-    html += `<div class="del" onclick="delMsg('${key}')">Delete</div>`;
-  }
-
-  html += `</div>`;
-
-  document.getElementById("messages").innerHTML += html;
-  document.getElementById("messages").scrollTop = 99999;
-});
-
-function delMsg(key){
-  db.ref("chat/"+key).remove();
-  location.reload();
-}
-</script>
-<script>
-const myName = localStorage.getItem("name");
-
-// 🔥 ONLINE STATUS SET
-const statusRef = firebase.database().ref("status/" + myName);
-firebase.database().ref(".info/connected").on("value", snap => {
-  if (snap.val() === true) {
-    statusRef.set("online");
-    statusRef.onDisconnect().set("offline");
-  }
-});
-
-// 🔥 COUNT ONLINE USERS
-firebase.database().ref("status").on("value", snap => {
-  let count = 0;
-  snap.forEach(s => {
-    if (s.val() === "online") count++;
-  });
-  document.getElementById("onlineUsers").innerText =
-    "Online users: " + count;
-});
-</script>
-</body>
-</html>
+  <input id="text" placeholder="Type message
