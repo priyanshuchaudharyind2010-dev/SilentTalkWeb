@@ -1,83 +1,114 @@
-<!<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-<title>Private Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silent Talk</title>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f0f0f;
-  color: #fff;
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial}
+body{
+  background:#0f0f0f;
+  color:#fff;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
-
-.chat-box {
-  max-width: 500px;
-  margin: auto;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+.container{
+  width:100%;
+  max-width:420px;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
 }
-
-header {
-  padding: 10px;
-  background: #111;
-  text-align: center;
+header{
+  padding:10px;
+  background:#111;
+  text-align:center;
 }
-
-#onlineStatus {
-  font-size: 13px;
-  color: #00ff7f;
+#onlineStatus{
+  font-size:13px;
+  color:#00ff88;
 }
-
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px;
+#messages{
+  flex:1;
+  overflow-y:auto;
+  padding:10px;
 }
-
-.msg {
-  background: #1f1f1f;
-  padding: 8px;
-  border-radius: 6px;
-  margin-bottom: 6px;
-  font-size: 14px;
+.msg{
+  background:#222;
+  padding:8px;
+  margin-bottom:6px;
+  border-radius:6px;
+  font-size:14px;
 }
-
-.input-box {
-  display: flex;
-  padding: 8px;
-  background: #111;
+.input-box{
+  display:flex;
+  padding:10px;
+  background:#111;
 }
-
-input {
-  flex: 1;
-  padding: 8px;
-  font-size: 14px;
+input{
+  flex:1;
+  padding:10px;
+  border:none;
+  border-radius:5px;
+  outline:none;
 }
-
-button {
-  padding: 8px 12px;
-  margin-left: 5px;
+button{
+  padding:10px 14px;
+  margin-left:5px;
+  border:none;
+  border-radius:5px;
+  background:#00ff88;
+  cursor:pointer;
+}
+#login{
+  position:fixed;
+  inset:0;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+.login-box{
+  width:90%;
+  max-width:300px;
+  background:#111;
+  padding:20px;
+  border-radius:10px;
+}
+.login-box input{
+  width:100%;
+  margin-bottom:10px;
 }
 </style>
 </head>
 
 <body>
-<div class="chat-box">
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-box">
+    <h2 style="text-align:center;margin-bottom:10px">Silent Talk</h2>
+    <input id="name" placeholder="Your name">
+    <input id="pass" type="password" placeholder="Password">
+    <button style="width:100%" onclick="login()">Enter</button>
+  </div>
+</div>
+
+<!-- CHAT -->
+<div class="container" id="chat" style="display:none">
   <header>
-    <b>Private Chat</b><br>
-    <span id="onlineStatus">Connecting...</span>
+    <h3>Private Chat</h3>
+    <div id="onlineStatus">Connecting...</div>
   </header>
 
-  <div class="messages" id="messages"></div>
+  <div id="messages"></div>
 
   <div class="input-box">
     <input id="msgInput" placeholder="Type message">
@@ -86,75 +117,87 @@ button {
 </div>
 
 <script>
-/* 🔹 Firebase config (अपना ही रखो) */
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-  projectId: "YOUR_PROJECT"
+  apiKey: "AIzaSyDMCOAamH396pZG2IILTwYLGRUKIgKXHQ",
+  authDomain: "silenttalkweb-6835a.firebaseapp.com",
+  databaseURL: "https://silenttalkweb-6835a-default-rtdb.firebaseio.com",
+  projectId: "silenttalkweb-6835a"
 });
 
 const db = firebase.database();
-
-/* 🔹 Unique username */
 let username = localStorage.getItem("username");
-if (!username) {
-  username = "user_" + Math.floor(Math.random() * 100000);
-  localStorage.setItem("username", username);
+
+/* LOGIN CHECK */
+window.onload = ()=>{
+  if(username){
+    document.getElementById("login").style.display="none";
+    document.getElementById("chat").style.display="flex";
+    setOnline();
+  }
+};
+
+/* LOGIN */
+function login(){
+  const name = document.getElementById("name").value.trim();
+  const pass = document.getElementById("pass").value;
+
+  if(name===""){ alert("Enter name"); return; }
+  if(pass!=="cutie123"){ alert("Wrong password"); return; }
+
+  username = name;
+  localStorage.setItem("username",username);
+  document.getElementById("login").style.display="none";
+  document.getElementById("chat").style.display="flex";
+  setOnline();
 }
 
-/* 🔹 Online status */
-const statusRef = db.ref("status/" + username);
-statusRef.set("online");
-statusRef.onDisconnect().set("offline");
+/* ONLINE STATUS */
+function setOnline(){
+  const ref = db.ref("status/"+username);
+  ref.set("online");
+  ref.onDisconnect().set("offline");
 
-/* 🔹 Show online count */
-db.ref("status").on("value", snap => {
-  let online = 0;
-  snap.forEach(s => {
-    if (s.val() === "online") online++;
+  db.ref("status").on("value",snap=>{
+    let c=0;
+    snap.forEach(s=>{
+      if(s.val()==="online") c++;
+    });
+    document.getElementById("onlineStatus").innerText="Online users: "+c;
   });
-  document.getElementById("onlineStatus").innerText =
-    "Online users: " + online;
-});
+}
 
-/* 🔹 Messages */
-const msgRef = db.ref("messages");
+/* SEND MESSAGE */
+function sendMsg(){
+  const text = msgInput.value.trim();
+  if(text==="") return;
 
-msgRef.limitToLast(50).on("child_added", snap => {
-  const data = snap.val();
+  db.ref("messages").push({
+    user:username,
+    text:text,
+    time:Date.now()
+  });
+  msgInput.value="";
+}
+
+/* RECEIVE MESSAGE */
+db.ref("messages").limitToLast(50).on("child_added",snap=>{
+  const d = snap.val();
   const div = document.createElement("div");
-  div.className = "msg";
-  div.innerText = data.user + ": " + data.text;
-  document.getElementById("messages").appendChild(div);
+  div.className="msg";
+  div.innerText = d.user + ": " + d.text;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
 
-  /* 🔔 Notification */
-  if (document.visibilityState !== "visible") {
-    if (Notification.permission === "granted") {
-      new Notification("New message", {
-        body: data.user + ": " + data.text
-      });
-    }
+  if(document.hidden && Notification.permission==="granted"){
+    new Notification("New message",{body:d.user+": "+d.text});
   }
 });
 
-/* 🔹 Send message */
-function sendMsg() {
-  const text = msgInput.value.trim();
-  if (text === "") return;
-
-  msgRef.push({
-    user: username,
-    text: text
-  });
-
-  msgInput.value = "";
-}
-
-/* 🔹 Ask notification permission */
-if (Notification.permission !== "granted") {
+/* NOTIFICATION PERMISSION */
+if("Notification" in window){
   Notification.requestPermission();
 }
 </script>
+
 </body>
 </html>
