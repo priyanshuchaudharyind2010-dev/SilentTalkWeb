@@ -5,138 +5,144 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Silent Talk</title>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <style>
-*{box-sizing:border-box;font-family:Arial}
-body{
-margin:0;
-background:#0f172a;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
+body {
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:#0f0f0f;
+  color:#fff;
 }
-#login,#chat{
-width:100%;
-max-width:360px;
-background:#020617;
-color:white;
-border-radius:12px;
-padding:15px;
-display:none;
+#login, #chat {
+  max-width:500px;
+  margin:auto;
+  padding:15px;
 }
-input,button{
-width:100%;
-padding:10px;
-margin-top:10px;
-border-radius:8px;
-border:none;
-font-size:15px;
+input, button {
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  border:none;
+  border-radius:5px;
 }
-button{background:#22c55e;color:black;font-weight:bold}
-#messages{
-height:300px;
-overflow-y:auto;
-margin-top:10px;
+button {
+  background:#00bcd4;
+  color:#000;
+  font-weight:bold;
 }
-.msg{
-background:#1e293b;
-padding:8px;
-border-radius:8px;
-margin-top:6px;
-font-size:14px;
+#messages {
+  height:60vh;
+  overflow-y:auto;
+  margin-top:10px;
 }
-.self{background:#22c55e;color:black}
-small{color:#94a3b8}
-.online{color:#22c55e;font-size:12px}
-.offline{color:#ef4444;font-size:12px}
+.msg {
+  background:#1e1e1e;
+  padding:8px;
+  border-radius:6px;
+  margin-bottom:6px;
+}
+.msg img, .msg video {
+  max-width:100%;
+  border-radius:6px;
+}
+#status {
+  font-size:12px;
+  color:#0f0;
+}
 </style>
 </head>
 
 <body>
 
 <div id="login">
-<h3>🔐 Login</h3>
-<input id="name" placeholder="Your name">
-<input id="pass" type="password" placeholder="Password">
-<button onclick="login()">Enter</button>
+  <h2>Silent Talk</h2>
+  <input id="pass" type="password" placeholder="Enter password">
+  <button onclick="login()">Enter</button>
 </div>
 
-<div id="chat">
-<h4>Silent Talk</h4>
-<div id="status"></div>
-<div id="messages"></div>
-<input id="msg" placeholder="Type message">
-<button onclick="send()">Send</button>
-<button onclick="clearChat()" style="background:#ef4444;color:white">Delete Chat</button>
+<div id="chat" style="display:none;">
+  <h3>Private Chat</h3>
+  <div id="status">Online users: 0</div>
+  <div id="messages"></div>
+  <input id="msgInput" placeholder="Type message or paste photo/video link">
+  <button onclick="send()">Send</button>
 </div>
 
 <script>
-const PASSWORD="cutie29";
-let user="";
-let onlineUsers={};
-
-document.getElementById("login").style.display="block";
-
-function login(){
-const n=document.getElementById("name").value.trim();
-const p=document.getElementById("pass").value;
-if(!n)return alert("Name likho");
-if(p!==PASSWORD)return alert("Wrong password");
-user=n;
-document.getElementById("login").style.display="none";
-document.getElementById("chat").style.display="block";
-setOnline(true);
-load();
-}
-
-function setOnline(state){
-onlineUsers[user]=state;
-localStorage.setItem("online",JSON.stringify(onlineUsers));
-showStatus();
-}
-
-window.addEventListener("beforeunload",()=>setOnline(false));
-
-function showStatus(){
-let html="";
-for(let u in onlineUsers){
-html+=`<div class="${onlineUsers[u]?"online":"offline"}">
-${u} : ${onlineUsers[u]?"online":"offline"}
-</div>`;
-}
-document.getElementById("status").innerHTML=html;
-}
-
-function load(){
-setInterval(()=>{
-const data=JSON.parse(localStorage.getItem("chat")||"[]");
-const box=document.getElementById("messages");
-box.innerHTML="";
-data.forEach(m=>{
-box.innerHTML+=`<div class="msg ${m.u===user?"self":""}">
-<b>${m.u}</b><br>${m.t}
-</div>`;
+// 🔥 Firebase config (TUMHARA)
+firebase.initializeApp({
+  apiKey: "AIzaSyDMCOAamH396pZG2IILTwYLGRUKIgKXHQ",
+  authDomain: "silenttalkweb-6835a.firebaseapp.com",
+  databaseURL: "https://silenttalkweb-6835a-default-rtdb.firebaseio.com",
+  projectId: "silenttalkweb-6835a"
 });
-box.scrollTop=box.scrollHeight;
-onlineUsers=JSON.parse(localStorage.getItem("online")||"{}");
-showStatus();
-},500);
+
+const db = firebase.database();
+
+// LOGIN
+function login(){
+  if(document.getElementById("pass").value === "cutie"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("chat").style.display="block";
+  } else {
+    alert("Wrong password");
+  }
 }
 
+// USERNAME
+let username = localStorage.getItem("username");
+if(!username){
+  username = "User_" + Math.floor(Math.random()*10000);
+  localStorage.setItem("username", username);
+}
+
+// ONLINE STATUS
+const statusRef = db.ref("status/"+username);
+db.ref(".info/connected").on("value", snap=>{
+  if(snap.val()){
+    statusRef.set("online");
+    statusRef.onDisconnect().set("offline");
+  }
+});
+db.ref("status").on("value", snap=>{
+  let online=0;
+  snap.forEach(s=>{
+    if(s.val()==="online") online++;
+  });
+  document.getElementById("status").innerText = "Online users: "+online;
+});
+
+// SEND MESSAGE
 function send(){
-const t=document.getElementById("msg").value.trim();
-if(!t)return;
-const data=JSON.parse(localStorage.getItem("chat")||"[]");
-data.push({u:user,t});
-localStorage.setItem("chat",JSON.stringify(data));
-document.getElementById("msg").value="";
+  const text = msgInput.value.trim();
+  if(text==="") return;
+  db.ref("messages").push({
+    user: username,
+    text: text
+  });
+  msgInput.value="";
 }
 
-function clearChat(){
-if(confirm("Delete all messages?")){
-localStorage.removeItem("chat");
-}
-}
+// RECEIVE
+db.ref("messages").limitToLast(50).on("child_added", snap=>{
+  const d = snap.val();
+  const div = document.createElement("div");
+  div.className="msg";
+
+  if(d.text.match(/\.(jpg|jpeg|png|gif)$/i)){
+    div.innerHTML = "<b>"+d.user+"</b><br><img src='"+d.text+"'>";
+  } else if(d.text.match(/\.(mp4|webm)$/i)){
+    div.innerHTML = "<b>"+d.user+"</b><br><video controls src='"+d.text+"'></video>";
+  } else {
+    div.innerHTML = "<b>"+d.user+":</b> "+d.text;
+  }
+
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+});
 </script>
 
 </body>
